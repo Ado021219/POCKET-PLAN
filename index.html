@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>My Budget</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--tx:#14202b;--mu:#6b7a88;--ac:#0f766e;--pos:#15803d;--neg:#dc2626;--warn:#b45309;--bd:#e3e8ed}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1419;--card:#18212a;--tx:#e8eef3;--mu:#8fa0ae;--ac:#2dd4bf;--pos:#4ade80;--neg:#f87171;--warn:#fbbf24;--bd:#27333e}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);padding:env(safe-area-inset-top) 0 96px}
+main,header,#login{max-width:760px;margin:0 auto;padding:12px 16px}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:22px;margin:0}h2{font-size:16px;margin:20px 0 8px}
+.card,.box{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.k{color:var(--mu);font-size:13px}.v{font-size:20px;font-weight:700}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.warn{color:var(--warn)}.muted{color:var(--mu)}
+input,select,button{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);width:100%}
+button{cursor:pointer;background:var(--ac);color:#fff;border:0;font-weight:600;width:auto}
+button.ghost{background:transparent;color:var(--mu);border:1px solid var(--bd)}
+button.x{background:transparent;color:var(--neg);padding:4px 8px;font-size:20px}
+form,.form{display:grid;gap:8px}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg{display:flex;gap:6px}.seg button{flex:1;background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}.row:last-child{border:0}
+.grow{flex:1;min-width:0}.sm{font-size:13px;color:var(--mu)}
+.bar{height:8px;background:var(--bd);border-radius:6px;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ac)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:right;padding:6px 4px;border-bottom:1px solid var(--bd)}th:first-child,td:first-child{text-align:left}th{color:var(--mu);font-weight:500}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--bd);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav div{display:flex;width:100%;max-width:760px}
+nav button{flex:1;background:none;color:var(--mu);border-radius:0;padding:14px 4px}nav button.on{color:var(--ac)}
+.pn{display:flex;align-items:center;justify-content:space-between;margin:12px 0}.pn b{font-size:17px}
+.pn button{padding:8px 14px}
+[hidden]{display:none!important}
+</style></head><body>
+
+<div id="login" hidden>
+  <h1>My Budget</h1><p class="muted">Sign in to the shared budget account.</p>
+  <div class="form box">
+    <input id="em" type="email" placeholder="Email" autocomplete="username">
+    <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
+    <div class="two"><button onclick="signIn()">Sign in</button><button class="ghost" onclick="signUp()">Create account</button></div>
+    <div id="err" class="neg sm"></div>
+  </div>
+</div>
+
+<div id="app" hidden>
+<header><h1>My Budget</h1><button id="out" class="ghost" onclick="signOut()" hidden>Sign out</button></header>
+<main>
+<section id="v-sum">
+  <div class="seg"><button id="bw" onclick="setPer('week')">Weekly</button><button id="bm" class="on" onclick="setPer('month')">Monthly</button></div>
+  <div class="pn"><button class="ghost" onclick="off--;render()">‹</button><b id="plabel"></b><button class="ghost" onclick="off++;render()">›</button></div>
+  <div class="grid" id="cards"></div>
+  <h2>Spending by category</h2><div class="box" id="cats"></div>
+  <h2>Recent periods</h2><div class="box"><table><thead><tr><th>Period</th><th>In</th><th>Out</th><th>Net</th></tr></thead><tbody id="hist"></tbody></table></div>
+</section>
+
+<section id="v-money" hidden>
+  <div class="box form">
+    <div class="seg"><button id="mi" class="on" onclick="setMode('in')">Money in</button><button id="mo" onclick="setMode('out')">Money out</button></div>
+    <div class="two"><input id="amt" type="number" inputmode="decimal" step="0.01" placeholder="Amount"><input id="date" type="date"></div>
+    <input id="desc" placeholder="Description (e.g. Salary, Groceries)">
+    <input id="cat" list="cats-l" placeholder="Category">
+    <datalist id="cats-l"><option>Salary</option><option>Food</option><option>Rent</option><option>Transport</option><option>Bills</option><option>Shopping</option><option>Health</option><option>Other</option></datalist>
+    <button onclick="addTx()">Add</button>
+  </div>
+  <h2>History</h2><div class="box" id="txs"></div>
+</section>
+
+<section id="v-debt" hidden>
+  <div class="box form">
+    <input id="dn" placeholder="Debt name (e.g. Credit card, Loan from John)">
+    <div class="two"><input id="dt" type="number" inputmode="decimal" step="0.01" placeholder="Total owed"><input id="dp" type="number" inputmode="decimal" step="0.01" placeholder="Already paid (optional)"></div>
+    <input id="dd" type="date"><div class="sm">Due date (optional)</div>
+    <button onclick="addDebt()">Add debt</button>
+  </div>
+  <h2>Debts</h2><div class="box" id="debts"></div>
+</section>
+</main>
+<nav><div>
+  <button class="tab on" data-v="sum" onclick="go('sum')">Summary</button>
+  <button class="tab" data-v="money" onclick="go('money')">Money</button>
+  <button class="tab" data-v="debt" onclick="go('debt')">Debts</button>
+</div></nav>
+</div>
+
+<script>
+/* ===== SETUP: paste your Firebase web config here to enable online sync + login. Leave apiKey empty for offline/local-only mode. ===== */
+const CFG={apiKey:"",authDomain:"",projectId:"",appId:""};
+const CUR="₱";
+/* ========================================================================== */
+const $=id=>document.getElementById(id);
+let S={tx:[],debts:[]},view="sum",per="month",off=0,mode="in",ref=null,fs=null,auth=null;
+const fmt=n=>(n<0?"-":"")+CUR+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const iso=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const fd=d=>d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const card=(k,v,c)=>`<div class="card"><div class="k">${k}</div><div class="v ${c}">${fmt(v)}</div></div>`;
+
+function save(){
+  if(ref)ref.set(S).catch(e=>alert("Could not save: "+e.message));
+  else localStorage.setItem("budget",JSON.stringify(S));
+  render();
+}
+function go(v){view=v;render()}
+function setPer(p){per=p;off=0;$("bw").classList.toggle("on",p=="week");$("bm").classList.toggle("on",p=="month");render()}
+function setMode(m){mode=m;$("mi").classList.toggle("on",m=="in");$("mo").classList.toggle("on",m=="out")}
+
+function range(o){
+  const n=new Date();let a,b;
+  if(per=="week"){a=new Date(n.getFullYear(),n.getMonth(),n.getDate()-((n.getDay()+6)%7)+o*7);b=new Date(a.getFullYear(),a.getMonth(),a.getDate()+6)}
+  else{a=new Date(n.getFullYear(),n.getMonth()+o,1);b=new Date(a.getFullYear(),a.getMonth()+1,0)}
+  return[iso(a),iso(b),a,b];
+}
+function tot(a,b){let i=0,o=0;S.tx.forEach(t=>{if(t.date>=a&&t.date<=b)t.type=="in"?i+=+t.amount:o+=+t.amount});return[i,o]}
+const debtLeft=()=>S.debts.reduce((s,d)=>s+Math.max(0,d.total-d.paid),0);
+
+function render(){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.v==view));
+  ["sum","money","debt"].forEach(v=>$("v-"+v).hidden=v!=view);
+  if(view=="sum")rSum();else if(view=="money")rMoney();else rDebt();
+}
+function rSum(){
+  const[a,b,da,db]=range(off),[i,o]=tot(a,b);
+  $("plabel").textContent=per=="week"?`${fd(da)} – ${fd(db)}`:da.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  $("cards").innerHTML=card("Income",i,"pos")+card("Spent",o,"neg")+card("Net",i-o,i-o<0?"neg":"pos")+card("Total debt left",debtLeft(),"warn");
+  const m={};S.tx.filter(t=>t.type=="out"&&t.date>=a&&t.date<=b).forEach(t=>{const c=t.cat||"Other";m[c]=(m[c]||0)+ +t.amount});
+  const e=Object.entries(m).sort((x,y)=>y[1]-x[1]);
+  $("cats").innerHTML=e.length?e.map(([c,v])=>`<div class="row"><div class="grow"><b>${esc(c)}</b><div class="bar"><i style="width:${v/o*100}%"></i></div></div><span>${fmt(v)}</span></div>`).join(""):'<span class="muted">No spending in this period.</span>';
+  let h="";
+  for(let k=0;k<6;k++){const[x,y,dx]=range(off-k),[p,q]=tot(x,y);
+    h+=`<tr><td>${per=="week"?fd(dx):dx.toLocaleDateString(undefined,{month:"short",year:"2-digit"})}</td><td class="pos">${fmt(p)}</td><td class="neg">${fmt(q)}</td><td class="${p-q<0?"neg":""}">${fmt(p-q)}</td></tr>`}
+  $("hist").innerHTML=h;
+}
+function rMoney(){
+  const l=[...S.tx].sort((x,y)=>y.date.localeCompare(x.date)).slice(0,200);
+  $("txs").innerHTML=l.length?l.map(t=>`<div class="row"><div class="grow"><b>${esc(t.desc||t.cat)}</b><div class="sm">${esc(t.cat||"")} · ${t.date}</div></div><b class="${t.type=="in"?"pos":"neg"}">${t.type=="in"?"+":"-"}${fmt(+t.amount)}</b><button class="x" onclick="delTx('${t.id}')">×</button></div>`).join(""):'<span class="muted">Nothing yet.</span>';
+}
+function rDebt(){
+  $("debts").innerHTML=S.debts.length?S.debts.map(d=>{const left=Math.max(0,d.total-d.paid),p=Math.min(100,d.paid/d.total*100);
+    return `<div class="row"><div class="grow"><b>${esc(d.name)}</b><div class="sm">${fmt(left)} left of ${fmt(d.total)}${d.due?" · due "+d.due:""}</div><div class="bar"><i style="width:${p}%"></i></div></div>${left>0?`<button onclick="payDebt('${d.id}')">Pay</button>`:'<span class="pos">Paid ✓</span>'}<button class="x" onclick="delDebt('${d.id}')">×</button></div>`}).join(""):'<span class="muted">No debts. 🎉</span>';
+}
+
+function addTx(){
+  const a=parseFloat($("amt").value);if(!(a>0))return alert("Enter an amount");
+  S.tx.push({id:uid(),type:mode,amount:a,desc:$("desc").value.trim(),cat:$("cat").value.trim()||(mode=="in"?"Income":"Other"),date:$("date").value||iso(new Date())});
+  ["amt","desc","cat"].forEach(i=>$(i).value="");save();
+}
+function delTx(id){if(confirm("Delete this entry?")){S.tx=S.tx.filter(t=>t.id!=id);save()}}
+function addDebt(){
+  const n=$("dn").value.trim(),t=parseFloat($("dt").value);if(!n||!(t>0))return alert("Enter a name and total");
+  S.debts.push({id:uid(),name:n,total:t,paid:parseFloat($("dp").value)||0,due:$("dd").value});
+  ["dn","dt","dp","dd"].forEach(i=>$(i).value="");save();
+}
+function payDebt(id){
+  const d=S.debts.find(x=>x.id==id),v=parseFloat(prompt(`Payment for ${d.name} (${CUR}):`));
+  if(!(v>0))return;d.paid+=v;
+  S.tx.push({id:uid(),type:"out",amount:v,desc:"Payment: "+d.name,cat:"Debt payment",date:iso(new Date())});save();
+}
+function delDebt(id){if(confirm("Delete this debt?")){S.debts=S.debts.filter(d=>d.id!=id);save()}}
+
+/* ---- auth + sync ---- */
+function fail(e){$("err").textContent=e.message.replace("Firebase: ","")}
+function signIn(){auth.signInWithEmailAndPassword($("em").value,$("pw").value).catch(fail)}
+function signUp(){auth.createUserWithEmailAndPassword($("em").value,$("pw").value).catch(fail)}
+function signOut(){auth.signOut()}
+const load=src=>new Promise((r,j)=>{const s=document.createElement("script");s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s)});
+
+async function boot(){
+  $("date").value=iso(new Date());
+  if(!CFG.apiKey){
+    try{S=JSON.parse(localStorage.getItem("budget"))||S}catch(e){}
+    $("app").hidden=false;render();return;
+  }
+  const v="10.12.2",b=`https://www.gstatic.com/firebasejs/${v}/firebase-`;
+  await load(b+"app-compat.js");await Promise.all([load(b+"auth-compat.js"),load(b+"firestore-compat.js")]);
+  firebase.initializeApp(CFG);auth=firebase.auth();fs=firebase.firestore();
+  let unsub=null;
+  auth.onAuthStateChanged(u=>{
+    if(unsub){unsub();unsub=null}
+    if(!u){ref=null;$("app").hidden=true;$("login").hidden=false;return}
+    $("login").hidden=true;$("app").hidden=false;$("out").hidden=false;
+    ref=fs.collection("budgets").doc(u.uid);
+    unsub=ref.onSnapshot(s=>{S=s.exists?s.data():{tx:[],debts:[]};S.tx=S.tx||[];S.debts=S.debts||[];render()});
+  });
+}
+boot();
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script></body></html>
